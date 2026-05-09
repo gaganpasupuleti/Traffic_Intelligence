@@ -51,7 +51,7 @@ data_simulator_api.py ──POST──► realtime_api.py (FastAPI)
 | `data_simulator_api.py` | **Stage 3 helper.** Calls `generate_single_row()` in a loop and **POSTs** each row to `http://localhost:8000/predict` (configurable `--url`, `--interval`). |
 | `traffic_model.pkl` | Trained model artifact used by `realtime_api.py`. |
 | `historical_traffic.csv` | Sample historical data (regenerate with `data_simulator.py` if you change the schema or intersections). |
-| `smart-city-dashboard/` | **Stage 4 — UI.** React 19 + Vite + Recharts + Tailwind 4; **`src/Dashboard.jsx`** polls **`http://localhost:8000/latest-traffic`** every 2 seconds. |
+| `smart-city-dashboard/` | **Stage 4 — UI.** React 19 + Vite + Recharts + Tailwind 4; **`src/Dashboard.jsx`** polls **`/latest-traffic`** (dev: proxied to FastAPI on port 8000). |
 | `ML_Enabled_Smart_City_Presentation_with_Team (1).pptx` | Team presentation asset (optional for code runs). |
 
 ---
@@ -101,10 +101,34 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. The UI expects the API on **http://localhost:8000** (see `API_BASE` in `Dashboard.jsx`).
+Open **http://localhost:5173** (or the forwarded URL in GitHub Codespaces). In **development**, Vite proxies API routes to **http://127.0.0.1:8000** inside the same machine, so the browser uses same-origin URLs like `/latest-traffic`. For a **production build** on a separate host, set **`VITE_API_BASE`** to your public API URL when running `npm run build`.
 
 - If **5173** shows “connection refused”, the Vite dev server is not running — start `npm run dev`.
-- If the dashboard shows **OFFLINE**, start the API on port 8000 (and optionally the simulator).
+- If the dashboard shows **OFFLINE** or “API Unreachable”, ensure **uvicorn** is listening on port **8000** in the same environment as Vite (see **GitHub Codespaces** below).
+
+### GitHub Codespaces
+
+In a Codespace, **`http://localhost:8000` in the browser is your laptop**, not the container — so a hard-coded API URL breaks with “Network Error”.
+
+This repo fixes that by:
+
+1. **`vite.config.js`** — `server.host: true` (reachable via port forwarding) and **`proxy`** from `/latest-traffic`, `/predict`, `/health`, etc. to **`http://127.0.0.1:8000`** inside the Codespace.
+2. **`Dashboard.jsx`** — in dev, **`API_BASE`** is empty so requests stay on the Vite origin and hit the proxy.
+
+**In the Codespace, run (repo root + dashboard):**
+
+```bash
+# Terminal A — from repository root
+python -m uvicorn realtime_api:app --host 0.0.0.0 --port 8000
+
+# Terminal B — optional live stream
+python data_simulator_api.py
+
+# Terminal C
+cd smart-city-dashboard && npm install && npm run dev
+```
+
+Open the **Ports** tab and use the forwarded URL for port **5173** (Public visibility if the simple browser cannot reach it). You usually do **not** need to open port 8000 in the browser when using the Vite proxy.
 
 ---
 

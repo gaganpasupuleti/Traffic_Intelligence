@@ -6,7 +6,9 @@ import {
 } from 'recharts'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:8000'
+// Dev: '' + Vite proxy → works on localhost and GitHub Codespaces (forwarded URL).
+// Prod: set VITE_API_BASE=https://your-api-host when building static assets.
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : 'http://localhost:8000')
 const POLL_INTERVAL = 2000
 
 // ─── Weather icon mapping ────────────────────────────────────────────────────
